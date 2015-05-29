@@ -508,7 +508,7 @@ public:
     Solver(){}
     Solver(const vector<string>& board_, int max_creep_hp, int creep_money, const vector<TowerType>& tower_types_)
         : board(Board(board_)), max_creep_hp(max_creep_hp), creep_money(creep_money), tower_types(tower_types_),
-        curren_turn(0)
+        current_turn(-1)
     {
         vector<double> cost(tower_types.size());
         rep(i, tower_types.size())
@@ -536,17 +536,22 @@ public:
 
     vector<Command> place_towers(const vector<Creep>& creeps, int money, const vector<int>& base_hps)
     {
+        ++current_turn;
+
         const int full_hp = base_hps.size() * 1000;
         const int lost_hp = full_hp - accumulate(all(base_hps), 0);
         if ((double)lost_hp / full_hp > 0.3)
+        {
+            dump(current_turn);
             return {};
+        }
 
         vector<vector<Pos>> paths(creeps.size());
         rep(i, creeps.size())
             paths[i] = predict_path(creeps[i].pos, board);
 
 
-//         dump(curren_turn);
+//         dump(current_turn);
 
         const int simulate_turns = 2 * board.size();
         vector<Command> commands;
@@ -641,8 +646,6 @@ public:
             commands.push_back(best_command);
         }
 
-        ++curren_turn;
-
         return commands;
     }
 
@@ -658,7 +661,7 @@ private:
     Board board;
     vector<Tower> towers;
 
-    int curren_turn;
+    int current_turn;
 };
 
 

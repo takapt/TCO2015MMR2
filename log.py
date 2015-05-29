@@ -35,7 +35,7 @@ def get_score(seed):
 def single(seeds):
     for seed in seeds:
         result = get_score(seed)
-        print('{:4d} {:5d} {:.3f}'.format(seed, result['score'], result['time']))
+        print('{:5d} {:5d} {:.3f}'.format(seed, result['score'], result['time']))
         sys.stdout.flush()
 
 def multi(seeds):
@@ -44,12 +44,12 @@ def multi(seeds):
     results = pool.map(get_score, seeds)
     for result in results:
         seed = result['seed']
-        print('{:4d} {:5d} {:.3f}'.format(seed, result['score'], result['time']))
+        print('{:5d} {:5d} {:.3f}'.format(seed, result['score'], result['time']))
         sys.stdout.flush()
 
 try:
 #     single(range(1, 10))
-    multi(range(1, 100))
+    multi(range(1, 1000))
 finally:
     os.remove(copied_exe_path)
 
