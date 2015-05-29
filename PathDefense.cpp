@@ -506,6 +506,16 @@ public:
         : board(Board(board_)), max_creep_hp(max_creep_hp), creep_money(creep_money), tower_types(tower_types_),
         curren_turn(0)
     {
+        vector<double> cost(tower_types.size());
+        rep(i, tower_types.size())
+            cost[i] = (double)tower_types[i].cost / (tower_types[i].damage * tower_types[i].range);
+        const double min_cost = *min_element(all(cost));
+        rep(i, tower_types.size())
+            if (cost[i] < min_cost * 3)
+                use_tower_types.push_back(tower_types[i]);
+
+        dump(tower_types.size());
+        dump(use_tower_types.size());
     }
 
     vector<Command> place_towers(const vector<Creep>& creeps, int money, const vector<int>& base_hps)
@@ -513,7 +523,6 @@ public:
         vector<vector<Pos>> paths(creeps.size());
         rep(i, creeps.size())
             paths[i] = predict_path(creeps[i].pos, board);
-
 
         const int simulate_turns = 2 * board.size();
 
@@ -528,7 +537,7 @@ public:
             int predict_score = accumulate(all(predict_base_hps), 0);
             for (auto& c : predict_creeps)
                 if (c.hp == 0)
-                    predict_score += creep_money;
+                    predict_score += creep_money * 5;
 
             const int inf = 1919810;
             int attackable_range[64][64];
@@ -565,11 +574,8 @@ public:
             {
                 if (board.can_build(x, y))
                 {
-                    for (auto& tower_type : tower_types)
+                    for (auto& tower_type : use_tower_types)
                     {
-//                         if (tower_type.range < attackable_range[y][x])
-//                             break;
-
                         if (money >= tower_type.cost && tower_type.range >= attackable_range[y][x])
                         {
                             ++cc;
@@ -582,10 +588,11 @@ public:
                             int npredict_score = accumulate(all(npredict_base_hps), 0);
                             for (auto& c : npredict_creeps)
                                 if (c.hp == 0)
-                                    npredict_score += creep_money;
+                                    npredict_score += creep_money * 5;
 
-//                             double score = double(npredict_score - predict_score) / tower_type.cost;
-                            double score = double(npredict_score - predict_score) - tower_type.cost / 3.0;
+                            double score = double(npredict_score - predict_score) - tower_type.cost;
+                            score *= 10000;
+                            score += board.path_in_range(x, y, tower_type.range).size();
                             if (score > best)
                             {
                                 best = score;
@@ -614,9 +621,11 @@ public:
 
 
 private:
-    Board board;
     int max_creep_hp, creep_money;
     vector<TowerType> tower_types;
+    vector<TowerType> use_tower_types;
+
+    Board board;
     vector<Tower> towers;
 
     int curren_turn;
@@ -630,7 +639,6 @@ public:
     int init(vector <string> board, int money, int creepHealth, int creepMoney, vector <int> towerTypes)
     {
         init_lower_range();
-
 
         vector<TowerType> tower_types(towerTypes.size() / 3);
         rep(i, tower_types.size())
