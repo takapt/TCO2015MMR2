@@ -277,7 +277,7 @@ struct Creep
 struct Command
 {
     Pos pos;
-    int id;
+    TowerType type;
 };
 
 class Board
@@ -542,7 +542,6 @@ public:
         const int lost_hp = full_hp - accumulate(all(base_hps), 0);
         if ((double)lost_hp / full_hp > 0.3)
         {
-            dump(current_turn);
             return {};
         }
 
@@ -631,7 +630,7 @@ public:
                             {
                                 best = score;
                                 best_command.pos = Pos(x, y);
-                                best_command.id = tower_type.id;
+                                best_command.type= tower_type;
                             }
                         }
                     }
@@ -640,9 +639,10 @@ public:
             if (best < 1e-3)
                 break;
 
-            towers.push_back(Tower(best_command.pos, &tower_types[best_command.id]));
-            board.build(best_command.pos.x, best_command.pos.y, best_command.id);
-            money -= tower_types[best_command.id].cost;
+            Tower tower(best_command.pos, &tower_types[best_command.type.id]);
+            towers.push_back(tower);
+            board.build(best_command.pos.x, best_command.pos.y, best_command.type.id);
+            money -= tower_types[best_command.type.id].cost;
             commands.push_back(best_command);
         }
 
@@ -706,7 +706,7 @@ public:
         {
             res.push_back(c.pos.x);
             res.push_back(c.pos.y);
-            res.push_back(c.id);
+            res.push_back(c.type.id);
         }
         return res;
     }
