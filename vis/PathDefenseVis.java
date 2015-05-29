@@ -320,8 +320,8 @@ class TestCase {
 }
 
 class Drawer extends JFrame {
-    public static final int EXTRA_WIDTH = 300;
-    public static final int EXTRA_HEIGHT = 200;
+    public static final int EXTRA_WIDTH = 330;
+    public static final int EXTRA_HEIGHT = 160;
 
     public World world;
     public DrawerPanel panel;
@@ -440,7 +440,7 @@ class Drawer extends JFrame {
                     g.fillRect(horPos+30, 205+i*20, world.baseHealth[i]/10, 19);
                     g.setColor(Color.BLACK);
                     g.fillRect(horPos+30+world.baseHealth[i]/10, 205+i*20, 100 - world.baseHealth[i]/10, 19);
-                    g2.drawString(Integer.toString(world.baseHealth[i]), horPos, 220+i*20);
+                    g2.drawString(String.format("%d: %4d", i, world.baseHealth[i]), horPos - 20, 220+i*20);
                     baseh += world.baseHealth[i];
                     g2.drawString(Integer.toString(i), 15 + world.tc.baseX[i] * cellSize + 2, 15 + (world.tc.baseY[i]+1) * cellSize-1);
                 }
@@ -469,9 +469,13 @@ class Drawer extends JFrame {
                     g.fillOval(xx, yy - 10, 9, 9);
 
 
+                    int built = 0;
+                    for (Tower tower : world.towers)
+                        if (tower.type == ttype)
+                            ++built;
                     TowerType t = world.tc.towerTypes[ttype];
                     g.setColor(Color.BLACK);
-                    g2.drawString(String.format("%2d, %2d, %2d", t.range, t.damage, t.cost), xx + 17, yy);
+                    g2.drawString(String.format("%2d, %2d, %2d, %3d", t.range, t.damage, t.cost, built), xx + 17, yy);
 
                     yy += 17;
                 }
