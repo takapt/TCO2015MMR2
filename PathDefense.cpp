@@ -223,6 +223,10 @@ struct Pos
         int dy = y - p.y;
         return dx * dx + dy * dy;
     }
+    double dist(const Pos& p) const
+    {
+        return sqrt(sq_dist(p));
+    }
 
     bool in_range(const Pos& p, int range) const
     {
@@ -516,18 +520,35 @@ public:
 
         dump(tower_types.size());
         dump(use_tower_types.size());
+
+        Pos pos[10];
+        int num_base = 0;
+        rep(y, board.size()) rep(x, board.size())
+        {
+            if (board.is_base(x, y))
+            {
+                ++num_base;
+                pos[board.base_id(x, y)] = Pos(x, y);
+            }
+        }
+        base_pos = vector<Pos>(pos, pos + num_base);
     }
 
     vector<Command> place_towers(const vector<Creep>& creeps, int money, const vector<int>& base_hps)
     {
+        const int full_hp = base_hps.size() * 1000;
+        const int lost_hp = full_hp - accumulate(all(base_hps), 0);
+        if ((double)lost_hp / full_hp > 0.3)
+            return {};
+
         vector<vector<Pos>> paths(creeps.size());
         rep(i, creeps.size())
             paths[i] = predict_path(creeps[i].pos, board);
 
-        const int simulate_turns = 2 * board.size();
 
 //         dump(curren_turn);
 
+        const int simulate_turns = 2 * board.size();
         vector<Command> commands;
         for (;;)
         {
@@ -591,8 +612,16 @@ public:
                                     npredict_score += creep_money * 5;
 
                             double score = double(npredict_score - predict_score) - tower_type.cost;
+
                             score *= 10000;
                             score += board.path_in_range(x, y, tower_type.range).size();
+
+                            score *= 10000;
+                            double nearest_base_dist = 1e9;
+                            for (auto& p : base_pos)
+                                upmin(nearest_base_dist, p.dist(Pos(x, y)));
+                            score += 1000 - nearest_base_dist;
+
                             if (score > best)
                             {
                                 best = score;
@@ -624,6 +653,7 @@ private:
     int max_creep_hp, creep_money;
     vector<TowerType> tower_types;
     vector<TowerType> use_tower_types;
+    vector<Pos> base_pos;
 
     Board board;
     vector<Tower> towers;
