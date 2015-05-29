@@ -584,8 +584,8 @@ public:
                                 if (c.hp == 0)
                                     npredict_score += creep_money;
 
-                            double score = double(npredict_score - predict_score) / tower_type.cost;
-//                             double score = double(npredict_score - predict_score) - tower_type.cost / 3.0;
+//                             double score = double(npredict_score - predict_score) / tower_type.cost;
+                            double score = double(npredict_score - predict_score) - tower_type.cost / 3.0;
                             if (score > best)
                             {
                                 best = score;
@@ -636,7 +636,7 @@ public:
         rep(i, tower_types.size())
         {
             tower_types[i].range = towerTypes[3 * i];
-            tower_types[i].damage = min(towerTypes[3 * i + 1], creepHealth);
+            tower_types[i].damage = towerTypes[3 * i + 1];
             tower_types[i].cost = towerTypes[3 * i + 2];
             tower_types[i].id = i;
         }
