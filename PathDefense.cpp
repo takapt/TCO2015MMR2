@@ -243,6 +243,50 @@ ostream& operator<<(ostream& os, const Pos& pos)
     return os;
 }
 
+template <typename T>
+class Array2D
+{
+public:
+    Array2D(int w, int h)
+        : w_(w), h_(h)
+    {
+    }
+
+    Array2D(int w, int h, const T& init_val)
+        : w_(w), h_(h)
+    {
+        clear(init_val);
+    }
+
+    Array2D()
+        : w_(-114514), h_(-1919810)
+    {
+    }
+
+    int width() const { return w_; }
+    int height() const { return h_; }
+
+    T& at(int x, int y)
+    {
+        assert(in_rect(x, y, width(), height()));
+        return a[y][x];
+    }
+    T& at(const Pos& pos)
+    {
+        return at(pos.x, pos.y);
+    }
+
+    void clear(const T& val)
+    {
+        rep(y, height()) rep(x, width())
+            at(x, y) = val;
+    }
+
+private:
+    int w_, h_;
+    T a[64][64];
+};
+
 
 const int MIN_TOWER_RANGE = 1;
 const int MAX_TOWER_RANGE = 5;
@@ -457,9 +501,12 @@ vector<Pos> predict_path(const Pos& start,  const Board& board)
     assert(false);
 }
 
-pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vector<Pos>>& paths, vector<int> base_hps, const Board& board, const vector<Tower>& towers, const int turns)
+
+pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vector<Pos>>& paths, vector<int> base_hps, const Board& board, const vector<Tower>& towers, Array2D<vector<int>>& attack_tower, const int turns)
 {
     assert(creeps.size() == paths.size());
+
+    vector<vector<int>> cand(towers.size());
 
     int dead = 0;
     rep(turn, turns)
@@ -467,24 +514,38 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
         if (dead == creeps.size())
             break;
 
+        for (auto& v : cand)
+            v.clear();
+
         rep(i, creeps.size())
         {
-            if (turn == (int)paths[i].size() - 1 && creeps[i].hp > 0)
+            if (creeps[i].hp > 0)
             {
-                assert(board.is_base(paths[i].back()));
-                int bi = board.base_id(paths[i].back());
-                base_hps[bi] = max(0, base_hps[bi] - creeps[i].hp);
+                if (turn == (int)paths[i].size() - 1)
+                {
+                    assert(board.is_base(paths[i].back()));
+                    int bi = board.base_id(paths[i].back());
+                    base_hps[bi] = max(0, base_hps[bi] - creeps[i].hp);
 
-                ++dead;
+                    ++dead;
+                }
+                else if (turn < (int)paths[i].size() - 1)
+                {
+                    for (auto& tower_i : attack_tower.at(paths[i][turn]))
+                        cand[tower_i].push_back(i);
+                }
             }
         }
 
-        for (auto& tower : towers)
+        rep(tower_i, towers.size())
         {
+            auto& tower = towers[tower_i];
+
             tuple<int, int, int> target(1919810, 1919810, -1);
-            rep(i, creeps.size())
+            for (int i : cand[tower_i])
             {
-                if (turn < (int)paths[i].size() - 1 && creeps[i].hp > 0 && tower.in_range(paths[i][turn]))
+                assert(tower.in_range(paths[i][turn]));
+                if (creeps[i].hp > 0)
                     upmin(target, make_tuple(tower.pos.sq_dist(paths[i][turn]), creeps[i].id, i));
             }
 
@@ -499,6 +560,7 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
             }
         }
     }
+
     return make_pair(creeps, base_hps);
 }
 
@@ -517,9 +579,6 @@ public:
         rep(i, tower_types.size())
             if (cost[i] < min_cost * 3)
                 use_tower_types.push_back(tower_types[i]);
-
-        dump(tower_types.size());
-        dump(use_tower_types.size());
 
         Pos pos[10];
         int num_base = 0;
@@ -550,19 +609,33 @@ public:
             paths[i] = predict_path(creeps[i].pos, board);
 
 
-//         dump(current_turn);
-
         const int simulate_turns = 2 * board.size();
         vector<Command> commands;
         for (;;)
         {
+            Array2D<vector<int>> attack_tower(board.size(), board.size());
+            rep(i, towers.size())
+            {
+                auto& t = towers[i];
+                for (auto& p : board.path_in_range(t.pos.x, t.pos.y, t.type->range))
+                    attack_tower.at(p).push_back(i);
+            }
+
+
             vector<Creep> predict_creeps;
             vector<int> predict_base_hps;
-            tie(predict_creeps, predict_base_hps) = simulate(creeps, paths, base_hps, board, towers, simulate_turns);
+            tie(predict_creeps, predict_base_hps) = simulate(creeps, paths, base_hps, board, towers, attack_tower, simulate_turns);
             int predict_score = accumulate(all(predict_base_hps), 0);
+            bool all_kill = true;
             for (auto& c : predict_creeps)
+            {
                 if (c.hp == 0)
                     predict_score += creep_money * 5;
+                else
+                    all_kill = false;
+            }
+            if (all_kill)
+                break;
 
             const int inf = 1919810;
             int attackable_range[64][64];
@@ -592,7 +665,6 @@ public:
             }
 
 
-            int cc = 0;
             double best = 0;
             Command best_command;
             rep(y, board.size()) rep(x, board.size())
@@ -603,13 +675,20 @@ public:
                     {
                         if (money >= tower_type.cost && tower_type.range >= attackable_range[y][x])
                         {
-                            ++cc;
                             vector<Tower> ntowers = towers;
                             ntowers.push_back(Tower(Pos(x, y), &tower_type));
 
+                            for (auto& p : board.path_in_range(x, y, tower_type.range))
+                                attack_tower.at(p).push_back((int)ntowers.size() - 1);
+
                             vector<Creep> npredict_creeps;
                             vector<int> npredict_base_hps;
-                            tie(npredict_creeps, npredict_base_hps) = simulate(creeps, paths, base_hps, board, ntowers, simulate_turns);
+                            tie(npredict_creeps, npredict_base_hps) = simulate(creeps, paths, base_hps, board, ntowers, attack_tower, simulate_turns);
+
+                            for (auto& p : board.path_in_range(x, y, tower_type.range))
+                                attack_tower.at(p).pop_back();
+
+
                             int npredict_score = accumulate(all(npredict_base_hps), 0);
                             for (auto& c : npredict_creeps)
                                 if (c.hp == 0)
@@ -630,7 +709,7 @@ public:
                             {
                                 best = score;
                                 best_command.pos = Pos(x, y);
-                                best_command.type= tower_type;
+                                best_command.type = tower_type;
                             }
                         }
                     }
@@ -640,6 +719,18 @@ public:
                 break;
 
             Tower tower(best_command.pos, &tower_types[best_command.type.id]);
+            bool in_range = false;
+            rep(i, creeps.size())
+            {
+                if (tower.in_range(paths[i][0]))
+                {
+                    in_range = true;
+                    break;
+                }
+            }
+            if (!in_range)
+                break;
+
             towers.push_back(tower);
             board.build(best_command.pos.x, best_command.pos.y, best_command.type.id);
             money -= tower_types[best_command.type.id].cost;
@@ -681,8 +772,6 @@ public:
             tower_types[i].cost = towerTypes[3 * i + 2];
             tower_types[i].id = i;
         }
-
-        dump(tower_types.size());
 
         solver = Solver(board, creepHealth, creepMoney, tower_types);
 
