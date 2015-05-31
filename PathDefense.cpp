@@ -646,7 +646,7 @@ public:
                 if (predict_creeps[ci].hp > 0)
                 {
 //                     rep(i, (int)paths[ci].size() - 1)
-                    for (int i = (int)paths[ci].size() - 2; i >= max(0, (int)paths[ci].size() - 6); --i)
+                    for (int i = (int)paths[ci].size() - 2; i >= 0; --i)
                     {
                         for (int dy = -MAX_TOWER_RANGE; dy <= MAX_TOWER_RANGE; ++dy)
                         {
@@ -719,17 +719,17 @@ public:
                 break;
 
             Tower tower(best_command.pos, &tower_types[best_command.type.id]);
-            bool in_range = false;
-            rep(i, creeps.size())
-            {
-                if (tower.in_range(paths[i][0]))
-                {
-                    in_range = true;
-                    break;
-                }
-            }
-            if (!in_range)
-                break;
+//             bool in_range = false;
+//             rep(i, creeps.size())
+//             {
+//                 if (tower.in_range(paths[i][0]))
+//                 {
+//                     in_range = true;
+//                     break;
+//                 }
+//             }
+//             if (!in_range)
+//                 break;
 
             towers.push_back(tower);
             board.build(best_command.pos.x, best_command.pos.y, best_command.type.id);
