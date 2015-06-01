@@ -232,6 +232,17 @@ struct Pos
     {
         return sq_dist(p) <= range * range;
     }
+
+    Pos next(int dir) const
+    {
+        return Pos(x + DX[dir], y + DY[dir]);
+    }
+
+    void move(int dir)
+    {
+        x += DX[dir];
+        y += DY[dir];
+    }
 };
 Pos operator*(int a, const Pos& pos)
 {
@@ -420,6 +431,7 @@ public:
     int size() const { return size_; }
 
     bool in(int x, int y) const { return 0 <= x && x < size() && 0 <= y && y < size(); }
+    bool in(const Pos& pos) const { return in(pos.x, pos.y); }
 
     vector<Pos> path_in_range(int sx, int sy, int range) const
     {
@@ -454,8 +466,358 @@ void init_lower_range()
         upmin(lower_range[r - 1], lower_range[r]);
 }
 
+class PathBuilder
+{
+public:
+    PathBuilder(){}
+    PathBuilder(const Board& board)
+        : board(board)
+    {
+        clr(tries, 0);
+        clr(_can_move, 0);
 
-vector<Pos> predict_path(const Pos& start,  const Board& board)
+        rep(y, board.size()) rep(x, board.size())
+        {
+            rep(dir, 4)
+            {
+                int nx = x + DX[dir], ny = y + DY[dir];
+                if (board.in(nx, ny) && board.is_base(nx, ny))
+                    _can_move[ny][nx][dir] = true;
+            }
+        }
+    }
+
+    void add_move(const Pos& from, const Pos& to)
+    {
+        Pos diff = to - from;
+        assert(abs(diff.x) + abs(diff.y) == 1);
+
+        int dir = -1;
+        rep(d, 4)
+            if (Pos(DX[d], DY[d]) == diff)
+                dir = d;
+        assert(dir != -1);
+
+        _can_move[from.y][from.x][dir] = true;
+        ++tries[from.y][from.x];
+    }
+
+    bool can_move(const Pos& p, int dir) const
+    {
+        return _can_move[p.y][p.x][dir];
+    }
+    bool possible_move(const Pos& p, int dir) const
+    {
+        return board.in(p.next(dir)) && (_can_move[p.y][p.x][dir] || tries[p.y][p.x] < 15);
+    }
+
+    vector<Pos> min_cost_path(const Pos& start, const Pos& prev = Pos(-1, -1)) const
+    {
+        int dp[64][64];
+        int prev_dir[64][64];
+        clr(dp, -1);
+        queue<Pos> q;
+        q.push(start);
+        dp[start.y][start.x] = 0;
+        if (prev.x != -1)
+            dp[prev.y][prev.x] = 0;
+        while (!q.empty())
+        {
+            const Pos cur = q.front();
+            q.pop();
+
+            rep(dir, 4)
+            {
+                const int nx = cur.x + DX[dir], ny = cur.y + DY[dir];
+                if (board.in(nx, ny) && possible_move(cur, dir) && (board.is_path(nx, ny) || board.is_base(nx, ny)) && dp[ny][nx] == -1)
+                {
+                    dp[ny][nx] = dp[cur.y][cur.x] + 1;
+                    prev_dir[ny][nx] = dir;
+
+                    if (board.is_base(nx, ny))
+                    {
+                        vector<Pos> path;
+                        for (int x = nx, y = ny; x != start.x || y != start.y; )
+                        {
+                            assert(dp[y][x] != -1);
+
+                            path.push_back(Pos(x, y));
+
+                            int pdir = (prev_dir[y][x] + 2) % 4;
+                            x += DX[pdir];
+                            y += DY[pdir];
+                        }
+                        reverse(all(path));
+                        return path;
+                    }
+
+                    q.push(Pos(nx, ny));
+                }
+            }
+        }
+
+        return min_cost_path_fail_safe(start, prev);
+    }
+
+    // this dont use possible_move. try all dirs
+    vector<Pos> min_cost_path_fail_safe(const Pos& start, const Pos& prev = Pos(-1, -1)) const
+    {
+        int dp[64][64];
+        int prev_dir[64][64];
+        clr(dp, -1);
+        queue<Pos> q;
+        q.push(start);
+        dp[start.y][start.x] = 0;
+        if (prev.x != -1)
+            dp[prev.y][prev.x] = 0;
+        while (!q.empty())
+        {
+            const Pos cur = q.front();
+            q.pop();
+
+            rep(dir, 4)
+            {
+                const int nx = cur.x + DX[dir], ny = cur.y + DY[dir];
+                if (board.in(nx, ny) && (board.is_path(nx, ny) || board.is_base(nx, ny)) && dp[ny][nx] == -1)
+                {
+                    dp[ny][nx] = dp[cur.y][cur.x] + 1;
+                    prev_dir[ny][nx] = dir;
+
+                    if (board.is_base(nx, ny))
+                    {
+                        vector<Pos> path;
+                        for (int x = nx, y = ny; x != start.x || y != start.y; )
+                        {
+                            assert(dp[y][x] != -1);
+
+                            path.push_back(Pos(x, y));
+
+                            int pdir = (prev_dir[y][x] + 2) % 4;
+                            x += DX[pdir];
+                            y += DY[pdir];
+                        }
+                        reverse(all(path));
+                        return path;
+                    }
+
+                    q.push(Pos(nx, ny));
+                }
+            }
+        }
+
+        assert(false);
+    }
+
+    vector<Pos> random_path(const Pos& start, const Pos& start_prev = Pos(-1, -1)) const
+    {
+        rep(try_i, 5)
+        {
+            vector<Pos> path;
+
+            bool retry = false;
+            Pos pos = start, prev = prev;
+            while (!board.is_base(pos))
+            {
+                vector<int> dirs;
+                rep(dir, 4)
+                    if (possible_move(pos, dir) && pos.next(dir) != prev)
+                        dirs.push_back(dir);
+                if (dirs.empty() || path.size() > 5 * board.size())
+                {
+                    retry = true;
+                    break;
+                }
+
+                int dir = dirs[g_rand.next_int(dirs.size())];
+                prev = pos;
+                pos.x += DX[dir];
+                pos.y += DY[dir];
+                path.push_back(pos);
+            }
+            if (!retry)
+                return path;
+            cerr << "retry" << endl;
+        }
+        return min_cost_path(start, start_prev);
+    }
+
+private:
+    Board board;
+    int tries[64][64];
+    bool _can_move[64][64][4];
+};
+
+vector<Pos> list_spawn_pos(const Board& board)
+{
+    set<Pos> spawn_pos;
+    rep(x, board.size())
+    {
+        if (board.is_path(x, 0))
+            spawn_pos.insert(Pos(x, 0));
+        if (board.is_path(x, board.size() - 1))
+            spawn_pos.insert(Pos(x, board.size() - 1));
+    }
+    rep(y, board.size())
+    {
+        if (board.is_path(0, y))
+            spawn_pos.insert(Pos(0, y));
+        if (board.is_path(board.size() - 1, y))
+            spawn_pos.insert(Pos(board.size() - 1, y));
+    }
+
+    rep(a, 2) rep(b, 2)
+    {
+        int sx = a ? 0 : board.size() - 1;
+        int sy = b ? 0 : board.size() - 1;
+        if (board.is_base(sx, sy))
+        {
+            rep(dir, 4)
+            {
+                Pos p = Pos(sx, sy).next(dir);
+                while (board.in(p) && board.is_path(p))
+                {
+                    spawn_pos.erase(p);
+                    p.move(dir);
+                }
+            }
+        }
+    }
+
+    return vector<Pos>(all(spawn_pos));
+}
+
+class World
+{
+public:
+    World(const Board& board, int max_creep_hp, int creep_money, const int current_turn, const int current_money, const vector<Creep>& current_creeps, const vector<Pos>& current_creep_prev, const vector<Tower>& towers, const vector<int>& current_base_hps, const PathBuilder& path_builder, const Array2D<vector<int>>& attack_tower)
+        : board(board), max_creep_hp(max_creep_hp), creep_money(creep_money), money(current_money), towers(towers), base_hps(current_base_hps), turn(current_turn), attack_tower(attack_tower)
+    {
+        set<int> remain_ids;
+        rep(i, 2040)
+            remain_ids.insert(i);
+        for (auto& c : current_creeps)
+            remain_ids.erase(c.id);
+
+        vector<Pos> spawn_pos = list_spawn_pos(board);
+        int num_add_creep = g_rand.next_int(2000 * (2000 - current_turn) / 2000);
+        rep(_, num_add_creep)
+        {
+            int appear_turn = g_rand.next_int(current_turn + 1, 1999);
+
+            int id = *remain_ids.begin();
+            remain_ids.erase(id);
+            appear_ids[appear_turn].push_back(id);
+
+            Pos pos = spawn_pos[g_rand.next_int(spawn_pos.size())];
+            int hp = max_creep_hp * (1 << (appear_turn / 500));
+            assert(!remain_ids.empty());
+
+            auto path = current_turn < 50 ? path_builder.min_cost_path(pos) : path_builder.random_path(pos);
+            creep_paths[id].push_back(pos);
+            creep_paths[id].insert(creep_paths[id].end(), all(path));
+        }
+
+        assert(current_creeps.size() == current_creep_prev.size());
+        rep(i, current_creeps.size())
+        {
+            auto& c = current_creeps[i];
+            alive_ids.insert(c.id);
+
+            Pos prev = current_creep_prev[i];
+            auto path = current_turn < 50 ? path_builder.min_cost_path(c.pos, prev) : path_builder.random_path(c.pos, prev);
+            creep_paths[c.id].push_back(c.pos);
+            creep_paths[c.id].insert(creep_paths[c.id].end(), all(path));
+            creep_hp[c.id] = c.hp;
+        }
+    }
+
+    void step_turn()
+    {
+        ++turn;
+
+        vector<int> dead_ids;
+
+        for (int id : alive_ids)
+        {
+            auto& path = creep_paths[id];
+            if (path.size() == 1)
+            {
+                Pos p = creep_paths[id].front();
+
+                dead_ids.push_back(id);
+
+                creep_paths[id].pop_front();
+                assert(board.is_base(p));
+                int base_i = board.base_id(p);
+                base_hps[base_i] = max(0, base_hps[base_i] - creep_hp[id]);
+            }
+            assert(!path.empty());
+            path.pop_front();
+        }
+
+        update_attack();
+
+        for (int id : dead_ids)
+            alive_ids.erase(id);
+        for (int id : appear_ids[turn])
+            alive_ids.insert(id);
+    }
+
+    void update_attack()
+    {
+        vector<vector<int>> cand(towers.size());
+        for (auto& v : cand)
+            v.clear();
+
+        for (int id : alive_ids)
+        {
+            assert(creep_hp[id] > 0);
+            for (auto& tower_i : attack_tower.at(creep_paths[id].front()))
+                cand[tower_i].push_back(id);
+        }
+
+        rep(tower_i, towers.size())
+        {
+            auto& tower = towers[tower_i];
+
+            tuple<int, int> target(1919810, 1919810);
+            for (int id : cand[tower_i])
+            {
+                assert(tower.in_range(creep_paths[id].front()));
+                if (creep_hp[id] > 0)
+                    upmin(target, make_tuple(tower.pos.sq_dist(creep_paths[id].front()), id));
+            }
+
+            int id = get<1>(target);
+            if (id != -1)
+            {
+                creep_hp[id] = max(0, creep_hp[id] - tower.type->damage);
+                if (creep_hp[id] == 0)
+                {
+                    money += creep_money;
+                    alive_ids.erase(id);
+                }
+            }
+        }
+    }
+
+    Board board;
+    int max_creep_hp, creep_money;
+    vector<Tower> towers;
+    Array2D<vector<int>> attack_tower;
+    vector<int> base_hps;
+
+    vector<int> appear_ids[2048];
+    int creep_hp[2048];
+    deque<Pos> creep_paths[2048];
+
+    int turn;
+    int money;
+    set<int> alive_ids;
+};
+
+
+vector<Pos> predict_path(const Pos& start,  const Board& board, const Pos& prev = Pos(-1, -1))
 {
     int dp[64][64];
     int prev_dir[64][64];
@@ -463,6 +825,8 @@ vector<Pos> predict_path(const Pos& start,  const Board& board)
     queue<Pos> q;
     q.push(start);
     dp[start.y][start.x] = 0;
+    if (prev.x != -1)
+        dp[prev.y][prev.x] = 0;
     while (!q.empty())
     {
         const Pos cur = q.front();
@@ -570,7 +934,8 @@ public:
     Solver(){}
     Solver(const vector<string>& board_, int max_creep_hp, int creep_money, const vector<TowerType>& tower_types_)
         : board(Board(board_)), max_creep_hp(max_creep_hp), creep_money(creep_money), tower_types(tower_types_),
-        current_turn(-1)
+        current_turn(-1),
+        path_builder(board_)
     {
         vector<double> cost(tower_types.size());
         rep(i, tower_types.size())
@@ -597,6 +962,21 @@ public:
     {
         ++current_turn;
 
+        vector<Pos> creep_prev_pos(creeps.size(), Pos(-1, -1));
+        rep(i, creeps.size())
+        {
+            auto& c = creeps[i];
+            auto& path = actual_paths[c.id];
+            if (!path.empty())
+            {
+                assert(c.pos.sq_dist(path.back()) == 1);
+                creep_prev_pos[i] = path.back();
+                path_builder.add_move(path.back(), c.pos);
+            }
+            path.push_back(c.pos);
+        }
+
+
         const int full_hp = base_hps.size() * 1000;
         const int lost_hp = full_hp - accumulate(all(base_hps), 0);
         if ((double)lost_hp / full_hp > 0.3)
@@ -606,7 +986,15 @@ public:
 
         vector<vector<Pos>> paths(creeps.size());
         rep(i, creeps.size())
-            paths[i] = predict_path(creeps[i].pos, board);
+        {
+            const auto& path = actual_paths[creeps[i].id];
+            if (path.size() <= 1)
+//                 paths[i] = predict_path(creeps[i].pos, board);
+                paths[i] = path_builder.min_cost_path(creeps[i].pos);
+            else
+//                 paths[i] = predict_path(creeps[i].pos, board, path[(int)path.size() - 2]);
+                paths[i] = path_builder.min_cost_path(creeps[i].pos, path[(int)path.size() - 2]);
+        }
 
 
         const int simulate_turns = 2 * board.size();
@@ -645,7 +1033,6 @@ public:
             {
                 if (predict_creeps[ci].hp > 0)
                 {
-//                     rep(i, (int)paths[ci].size() - 1)
                     for (int i = (int)paths[ci].size() - 2; i >= 0; --i)
                     {
                         for (int dy = -MAX_TOWER_RANGE; dy <= MAX_TOWER_RANGE; ++dy)
@@ -751,6 +1138,10 @@ private:
 
     Board board;
     vector<Tower> towers;
+
+    vector<Pos> actual_paths[2048];
+
+    PathBuilder path_builder;
 
     int current_turn;
 };

@@ -31,7 +31,7 @@ for seed in seeds:
     if ratio < 20:
         sum_ratio += ratio
 
-    if abs(x - y) / (x + 1e-10) > thresh:
+    if abs(x - y) / (x + 1e-10) > thresh and ratio < 0.9:
         print('{:>5} {:>16} {:>16} {:>7.3f}'.format(seed, x, y, ratio))
 
 total_ratio = sum_ratio / len(seeds)
