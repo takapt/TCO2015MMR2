@@ -18,7 +18,7 @@ seeds = list(set(p) & set(q))
 sum_ratio = 0
 win_p = 0
 lose_p = 0
-thresh = 0.01
+thresh = 0.00001
 for seed in seeds:
     x, y = p[seed], q[seed]
     if abs(x - y) / (x + 1e-10) > thresh:
@@ -29,6 +29,8 @@ for seed in seeds:
 
     if x != 0:
         ratio = y / x
+    else:
+        ratio = 0
     if ratio < 20:
         sum_ratio += ratio
 
