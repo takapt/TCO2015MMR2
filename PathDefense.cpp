@@ -535,7 +535,7 @@ public:
             rep(dir, 4)
             {
                 const int nx = cur.x + DX[dir], ny = cur.y + DY[dir];
-                if (board.in(nx, ny) && possible_move(cur, dir, 20000) && (board.is_path(nx, ny) || board.is_base(nx, ny)) && dp[ny][nx] == -1)
+                if (board.in(nx, ny) && possible_move(cur, dir, 20) && (board.is_path(nx, ny) || board.is_base(nx, ny)) && dp[ny][nx] == -1)
                 {
                     dp[ny][nx] = dp[cur.y][cur.x] + 1;
                     prev_dir[ny][nx] = dir;
@@ -1156,19 +1156,19 @@ public:
 //             if (!in_range)
 //                 break;
 
-//             World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower);
-//             World next_world = ori_world;
-//             ori_world.go(2000);
-//             if (accumulate(all(ori_world.base_hps), 0) == 0)
-//             {
-//                 next_world.add_tower(tower);
-//                 next_world.go(2000);
-//
-//                 if (ori_world.score() + creep_money * 10 >= next_world.score())
-//                 {
-//                     break;
-//                 }
-//             }
+            World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower);
+            World next_world = ori_world;
+            ori_world.go(2000);
+            if (accumulate(all(ori_world.base_hps), 0) == 0)
+            {
+                next_world.add_tower(tower);
+                next_world.go(2000);
+
+                if (ori_world.score() + creep_money * 10 >= next_world.score())
+                {
+                    break;
+                }
+            }
 
 //             dump(current_turn);
 //             dump(ori_world.money);
