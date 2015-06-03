@@ -522,11 +522,6 @@ public:
         queue<Pos> q;
         q.push(start);
         dp[start.y][start.x] = 0;
-        if (prev.x != -1)
-        {
-            assert(start.sq_dist(prev) == 1);
-            dp[prev.y][prev.x] = 0;
-        }
         while (!q.empty())
         {
             const Pos cur = q.front();
@@ -535,7 +530,10 @@ public:
             rep(dir, 4)
             {
                 const int nx = cur.x + DX[dir], ny = cur.y + DY[dir];
-                if (board.in(nx, ny) && possible_move(cur, dir, 20000) && (board.is_path(nx, ny) || board.is_base(nx, ny)) && dp[ny][nx] == -1)
+                if (cur == start && Pos(nx, ny) == prev)
+                    continue;
+
+                if (board.in(nx, ny) && possible_move(cur, dir, 20) && (board.is_path(nx, ny) || board.is_base(nx, ny)) && dp[ny][nx] == -1)
                 {
                     dp[ny][nx] = dp[cur.y][cur.x] + 1;
                     prev_dir[ny][nx] = dir;
@@ -574,8 +572,6 @@ public:
         queue<Pos> q;
         q.push(start);
         dp[start.y][start.x] = 0;
-        if (prev.x != -1)
-            dp[prev.y][prev.x] = 0;
         while (!q.empty())
         {
             const Pos cur = q.front();
@@ -584,6 +580,9 @@ public:
             rep(dir, 4)
             {
                 const int nx = cur.x + DX[dir], ny = cur.y + DY[dir];
+                if (cur == start && Pos(nx, ny) == prev)
+                    continue;
+
                 if (board.in(nx, ny) && (board.is_path(nx, ny) || board.is_base(nx, ny)) && dp[ny][nx] == -1)
                 {
                     dp[ny][nx] = dp[cur.y][cur.x] + 1;
@@ -909,6 +908,7 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
     assert(creeps.size() == paths.size());
 
     vector<vector<int>> cand(towers.size());
+    vector<int> lower(base_hps.size());
 
     int dead = 0;
     rep(turn, turns)
@@ -1026,16 +1026,15 @@ public:
         rep(i, creeps.size())
         {
             const auto& path = actual_paths[creeps[i].id];
+            paths[i] = predict_path(creeps[i].pos, board);
 //             if (path.size() <= 1)
-//                 paths[i] = predict_path(creeps[i].pos, board);
-                paths[i] = path_builder.min_cost_path(creeps[i].pos);
+//                 paths[i] = path_builder.min_cost_path(creeps[i].pos);
 //             else
-// //                 paths[i] = predict_path(creeps[i].pos, board, path[(int)path.size() - 2]);
 //                 paths[i] = path_builder.min_cost_path(creeps[i].pos, path[(int)path.size() - 2]);
         }
 
 
-        const int simulate_turns = 2 * board.size();
+        const int simulate_turns = min(2 * board.size(), 2000 - current_turn);
         vector<Command> commands;
         for (;;)
         {
@@ -1147,39 +1146,46 @@ public:
 //             bool in_range = false;
 //             rep(i, creeps.size())
 //             {
-//                 if (tower.in_range(paths[i][0]))
+//                 rep(j, min((int)paths.size() - 1, 20))
 //                 {
-//                     in_range = true;
-//                     break;
+//                     if (tower.in_range(paths[i][j]))
+//                     {
+//                         in_range = true;
+//                         break;
+//                     }
 //                 }
+//                 if (in_range)
+//                     break;
 //             }
 //             if (!in_range)
 //                 break;
 
-//             World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower);
-//             World next_world = ori_world;
-//             ori_world.go(2000);
-//             if (accumulate(all(ori_world.base_hps), 0) == 0)
-//             {
-//                 next_world.add_tower(tower);
-//                 next_world.go(2000);
-//
-//                 if (ori_world.score() + creep_money * 10 >= next_world.score())
-//                 {
-//                     break;
-//                 }
-//             }
+//             if (towers.empty() && current_turn < 100)
+            {
+                World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower);
+                World next_world = ori_world;
+                ori_world.go(2000);
+                if (accumulate(all(ori_world.base_hps), 0) == 0)
+                {
+                    next_world.add_tower(tower);
+                    next_world.go(2000);
 
-//             dump(current_turn);
-//             dump(ori_world.money);
-//             dump(ori_world.score());
-//             dump(next_world.money);
-//             dump(next_world.score());
-//             dump(base_hps);
-//             dump(ori_world.base_hps);
-//             dump(next_world.base_hps);
-//             cerr << endl;
-//
+                    if (ori_world.score() >= next_world.score())
+                    {
+                        dump(current_turn);
+                        dump(ori_world.money);
+                        dump(ori_world.score());
+                        dump(next_world.money);
+                        dump(next_world.score());
+                        dump(base_hps);
+                        dump(ori_world.base_hps);
+                        dump(next_world.base_hps);
+                        cerr << endl;
+                        break;
+                    }
+                }
+            }
+
             towers.push_back(tower);
             board.build(best_command.pos.x, best_command.pos.y, best_command.type.id);
             money -= tower_types[best_command.type.id].cost;
