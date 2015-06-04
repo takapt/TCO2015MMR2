@@ -1172,15 +1172,15 @@ public:
 
                     if (ori_world.score() >= next_world.score())
                     {
-                        dump(current_turn);
-                        dump(ori_world.money);
-                        dump(ori_world.score());
-                        dump(next_world.money);
-                        dump(next_world.score());
-                        dump(base_hps);
-                        dump(ori_world.base_hps);
-                        dump(next_world.base_hps);
-                        cerr << endl;
+//                         dump(current_turn);
+//                         dump(ori_world.money);
+//                         dump(ori_world.score());
+//                         dump(next_world.money);
+//                         dump(next_world.score());
+//                         dump(base_hps);
+//                         dump(ori_world.base_hps);
+//                         dump(next_world.base_hps);
+//                         cerr << endl;
                         break;
                     }
                 }
@@ -1240,8 +1240,8 @@ public:
     }
     vector <int> placeTowers(vector <int> creep_, int money, vector <int> baseHealth)
     {
-//         if (g_timer.get_elapsed() > G_TL)
-//             return {};
+        if (g_timer.get_elapsed() > G_TL)
+            return {};
 
         vector<Creep> creeps(creep_.size() / 4);
         rep(i, creeps.size())
