@@ -30,7 +30,8 @@ for seed in seeds:
     if x != 0:
         ratio = y / x
     else:
-        ratio = 0
+        if y > 0:
+            ratio = 100
 
     sum_ratio += min(2, ratio)
 

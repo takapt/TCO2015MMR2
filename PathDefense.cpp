@@ -653,6 +653,7 @@ private:
     bool _can_move[64][64][4];
 };
 
+vector<Pos> spawn_pos;
 vector<Pos> list_spawn_pos(const Board& board)
 {
     set<Pos> spawn_pos;
@@ -695,7 +696,7 @@ vector<Pos> list_spawn_pos(const Board& board)
 class World
 {
 public:
-    World(const Board& board, int max_creep_hp, int creep_money, const int current_turn, const int current_money, const vector<Creep>& current_creeps, const vector<Pos>& current_creep_prev, const vector<Tower>& towers, const vector<int>& current_base_hps, const PathBuilder& path_builder, const Array2D<vector<int>>& attack_tower)
+    World(const Board& board, int max_creep_hp, int creep_money, const int current_turn, const int current_money, const vector<Creep>& current_creeps, const vector<Pos>& current_creep_prev, const vector<Tower>& towers, const vector<int>& current_base_hps, const PathBuilder& path_builder, const Array2D<vector<int>>& attack_tower, int appear_creeps)
         : board(board), max_creep_hp(max_creep_hp), creep_money(creep_money), money(current_money), towers(towers), base_hps(current_base_hps), turn(current_turn), attack_tower(attack_tower)
     {
         set<int> remain_ids;
@@ -704,8 +705,12 @@ public:
         for (auto& c : current_creeps)
             remain_ids.erase(c.id);
 
-        vector<Pos> spawn_pos = list_spawn_pos(board);
-        int num_add_creep = g_rand.next_int(1000 * (2000 - current_turn) / 2000, 2000 * (2000 - current_turn) / 2000);
+        int num_add_creep;
+        if (current_turn < 100)
+            num_add_creep = g_rand.next_int(1000 * (2000 - current_turn) / 2000, 2000 * (2000 - current_turn) / 2000);
+        else
+            num_add_creep = max(0, min(2000 - (int)current_creeps.size(), (int)((double)appear_creeps / current_turn * 2000 - appear_creeps)));
+
         rep(_, num_add_creep)
         {
             int appear_turn = g_rand.next_int(current_turn, 1999);
@@ -908,7 +913,6 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
     assert(creeps.size() == paths.size());
 
     vector<vector<int>> cand(towers.size());
-    vector<int> lower(base_hps.size());
 
     int dead = 0;
     rep(turn, turns)
@@ -1000,6 +1004,18 @@ public:
     {
         ++current_turn;
 
+        if (g_timer.get_elapsed() > G_TL * 0.93)
+        {
+            static bool f;
+            if (!f)
+            {
+                dump(current_turn);
+                dump(g_timer.get_elapsed());
+            }
+            f = true;
+            return {};
+        }
+
         vector<Pos> creep_prev_pos(creeps.size(), Pos(-1, -1));
         rep(i, creeps.size())
         {
@@ -1017,10 +1033,10 @@ public:
 
         const int full_hp = base_hps.size() * 1000;
         const int lost_hp = full_hp - accumulate(all(base_hps), 0);
-        if ((double)lost_hp / full_hp > 0.3)
-        {
-            return {};
-        }
+//         if ((double)lost_hp / full_hp > 0.2)
+//         {
+//             return {};
+//         }
 
         vector<vector<Pos>> paths(creeps.size());
         rep(i, creeps.size())
@@ -1161,29 +1177,41 @@ public:
 //                 break;
 
 //             if (towers.empty() && current_turn < 100)
+//             if (best / 1e8 < tower.type->cost)
             {
-                World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower);
-                World next_world = ori_world;
-                ori_world.go(2000);
-                if (accumulate(all(ori_world.base_hps), 0) == 0)
-                {
-                    next_world.add_tower(tower);
-                    next_world.go(2000);
+                int appear_creeps = 0;
+                rep(i, 2010)
+                    if (!actual_paths[i].empty())
+                        ++appear_creeps;
 
-                    if (ori_world.score() >= next_world.score())
+                int bad = 0;
+                rep(_, 2)
+                {
+                    World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower, appear_creeps);
+                    World next_world = ori_world;
+                    ori_world.go(2000);
+//                     if (accumulate(all(ori_world.base_hps), 0) == 0)
                     {
-//                         dump(current_turn);
-//                         dump(ori_world.money);
-//                         dump(ori_world.score());
-//                         dump(next_world.money);
-//                         dump(next_world.score());
-//                         dump(base_hps);
-//                         dump(ori_world.base_hps);
-//                         dump(next_world.base_hps);
-//                         cerr << endl;
-                        break;
+                        next_world.add_tower(tower);
+                        next_world.go(2000);
+
+                        if (ori_world.score() >= next_world.score())
+                        {
+                            //                         dump(current_turn);
+                            //                         dump(ori_world.money);
+                            //                         dump(ori_world.score());
+                            //                         dump(next_world.money);
+                            //                         dump(next_world.score());
+                            //                         dump(base_hps);
+                            //                         dump(ori_world.base_hps);
+                            //                         dump(next_world.base_hps);
+                            //                         cerr << endl;
+                            ++bad;
+                        }
                     }
                 }
+                if (bad >= 2)
+                    break;
             }
 
             towers.push_back(tower);
@@ -1197,8 +1225,6 @@ public:
 
 
 
-
-private:
     int max_creep_hp, creep_money;
     vector<TowerType> tower_types;
     vector<TowerType> use_tower_types;
@@ -1224,6 +1250,7 @@ public:
         g_timer.start();
 
         init_lower_range();
+        ::spawn_pos = list_spawn_pos(board);
 
         vector<TowerType> tower_types(towerTypes.size() / 3);
         rep(i, tower_types.size())
@@ -1240,9 +1267,6 @@ public:
     }
     vector <int> placeTowers(vector <int> creep_, int money, vector <int> baseHealth)
     {
-        if (g_timer.get_elapsed() > G_TL)
-            return {};
-
         vector<Creep> creeps(creep_.size() / 4);
         rep(i, creeps.size())
         {
@@ -1261,6 +1285,10 @@ public:
             res.push_back(c.pos.y);
             res.push_back(c.type.id);
         }
+
+        if (solver.current_turn == 1999)
+            dump(g_timer.get_elapsed());
+
         return res;
     }
 
