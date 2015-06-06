@@ -31,8 +31,8 @@ for seed in seeds:
         ratio = y / x
     else:
         ratio = 0
-    if ratio < 20:
-        sum_ratio += min(2, ratio)
+
+    sum_ratio += min(2, ratio)
 
     if abs(x - y) / (x + 1e-10) > thresh:
         print('{:>5} {:>16} {:>16} {:>7.3f}'.format(seed, x, y, ratio))
@@ -41,5 +41,5 @@ total_ratio = sum_ratio / len(seeds)
 win_p /= len(seeds)
 lose_p /= len(seeds)
 print('total_ratio: {}'.format(total_ratio))
-print('win_p: {}'.format(win_p))
+print('win_p : {}'.format(win_p))
 print('lose_p: {}'.format(lose_p))

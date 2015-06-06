@@ -980,7 +980,7 @@ public:
             cost[i] = (double)tower_types[i].cost / (tower_types[i].damage * tower_types[i].range);
         const double min_cost = *min_element(all(cost));
         rep(i, tower_types.size())
-            if (cost[i] < min_cost * 1.5)
+            if (cost[i] < min_cost * 1.3)
                 use_tower_types.push_back(tower_types[i]);
 
         Pos pos[10];
@@ -1118,10 +1118,10 @@ public:
                                 if (c.hp == 0)
                                     npredict_score += creep_money * 5;
 
-                            double score = double(npredict_score - predict_score) - tower_type.cost;
+                            double score = double(npredict_score - predict_score) - tower_type.cost / 3 * 3;
 
                             score *= 10000;
-                            score += board.path_in_range(x, y, tower_type.range).size();
+                            score += tower_type.damage * board.path_in_range(x, y, tower_type.range).size() / (double)tower_type.cost;
 
                             score *= 10000;
                             double nearest_base_dist = 1e9;
