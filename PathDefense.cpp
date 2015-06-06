@@ -980,7 +980,7 @@ public:
             cost[i] = (double)tower_types[i].cost / (tower_types[i].damage * tower_types[i].range);
         const double min_cost = *min_element(all(cost));
         rep(i, tower_types.size())
-            if (cost[i] < min_cost * 3)
+            if (cost[i] < min_cost * 1.5)
                 use_tower_types.push_back(tower_types[i]);
 
         Pos pos[10];
