@@ -707,7 +707,7 @@ public:
 
         int num_add_creep;
         if (current_turn < 100)
-            num_add_creep = g_rand.next_int(1000 * (2000 - current_turn) / 2000, 2000 * (2000 - current_turn) / 2000);
+            num_add_creep = max(0, g_rand.next_int(1000 * (2000 - current_turn) / 2000, 2000 * (2000 - current_turn) / 2000) - appear_creeps);
         else
             num_add_creep = max(0, min(2000 - (int)current_creeps.size(), (int)((double)appear_creeps / current_turn * 2000 - appear_creeps)));
 
@@ -1147,7 +1147,6 @@ public:
                                 best = score;
                                 best_command.pos = Pos(x, y);
                                 best_command.type = tower_type;
-                                dump(best_command.pos);
                             }
                         }
                     }
@@ -1181,7 +1180,7 @@ public:
                         ++appear_creeps;
 
                 int bad = 0;
-                rep(_, 5)
+                rep(_, 3)
                 {
                     World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower, appear_creeps);
                     World next_world = ori_world;
@@ -1191,23 +1190,25 @@ public:
                         next_world.add_tower(tower);
                         next_world.go(2000);
 
-                        if (ori_world.score() >= next_world.score())
+                        if (ori_world.score() > next_world.score())
                         {
-                            dump(tower.pos);
-                            dump(current_turn);
-                            dump(ori_world.money);
-                            dump(ori_world.score());
-                            dump(next_world.money);
-                            dump(next_world.score());
-                            dump(base_hps);
-                            dump(ori_world.base_hps);
-                            dump(next_world.base_hps);
-                            cerr << endl;
+//                             dump(tower.pos);
+//                             dump(current_turn);
+//                             dump(ori_world.money);
+//                             dump(ori_world.score());
+//                             dump(next_world.money);
+//                             dump(next_world.score());
+//                             dump(base_hps);
+//                             dump(ori_world.base_hps);
+//                             dump(next_world.base_hps);
+//                             cerr << endl;
                             ++bad;
+                            if (bad >= 2)
+                                break;
                         }
                     }
                 }
-                if (bad >= 3)
+                if (bad >= 2)
                 {
                     sort(all(command_cands), [](const pair<double, Command>& a, const pair<double, Command>& b){return a.first > b.first;});
 
