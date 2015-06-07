@@ -787,9 +787,12 @@ public:
 
     void update_attack()
     {
-        vector<vector<int>> cand(towers.size());
-        for (auto& v : cand)
-            v.clear();
+//         vector<vector<int>> cand(towers.size());
+//         for (auto& v : cand)
+//             v.clear();
+        static vector<int> cand[64 * 64];
+        rep(i, towers.size())
+            cand[i].clear();
 
         for (int id : alive_ids)
         {
@@ -803,17 +806,21 @@ public:
         {
             auto& tower = towers[tower_i];
 
-            tuple<int, int> target(1919810, -1);
+//             tuple<int, int> target(1919810, -1);
+            int target = INT_MAX;
             for (int id : cand[tower_i])
             {
                 assert(tower.in_range(creep_paths[id].front()));
                 if (creep_hp[id] > 0)
-                    upmin(target, make_tuple(tower.pos.sq_dist(creep_paths[id].front()), id));
+//                     upmin(target, make_tuple(tower.pos.sq_dist(creep_paths[id].front()), id));
+                    upmin(target, (tower.pos.sq_dist(creep_paths[id].front()) << 16) | id);
             }
 
-            int id = get<1>(target);
-            if (id != -1)
+//             int id = get<1>(target);
+//             if (id != -1)
+            if (target != INT_MAX)
             {
+                int id = target & ((1 << 16) - 1);
                 creep_hp[id] = max(0, creep_hp[id] - tower.type->damage);
                 if (creep_hp[id] == 0)
                 {
@@ -912,7 +919,12 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
 {
     assert(creeps.size() == paths.size());
 
-    vector<vector<int>> cand(towers.size());
+//     vector<vector<int>> cand(towers.size());
+    static vector<int> cand[64 * 64];
+
+    int id_to_index[2048];
+    rep(i, creeps.size())
+        id_to_index[creeps[i].id] = i;
 
     int dead = 0;
     rep(turn, turns)
@@ -920,8 +932,10 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
         if (dead == creeps.size())
             break;
 
-        for (auto& v : cand)
-            v.clear();
+//         for (auto& v : cand)
+//             v.clear();
+        rep(i, towers.size())
+            cand[i].clear();
 
         rep(i, creeps.size())
         {
@@ -947,17 +961,21 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
         {
             auto& tower = towers[tower_i];
 
-            tuple<int, int, int> target(1919810, 1919810, -1);
+//             tuple<int, int, int> target(1919810, 1919810, -1);
+            int target = INT_MAX;
             for (int i : cand[tower_i])
             {
                 assert(tower.in_range(paths[i][turn]));
                 if (creeps[i].hp > 0)
-                    upmin(target, make_tuple(tower.pos.sq_dist(paths[i][turn]), creeps[i].id, i));
+//                     upmin(target, make_tuple(tower.pos.sq_dist(paths[i][turn]), creeps[i].id, i));
+                    upmin(target, (tower.pos.sq_dist(paths[i][turn]) << 16) | creeps[i].id);
             }
 
-            int i = get<2>(target);
-            if (i != -1)
+//             int i = get<2>(target);
+//             if (i != -1)
+            if (target != INT_MAX)
             {
+                int i = id_to_index[target & ((1 << 16) - 1)];
                 assert(0 <= i && i < creeps.size());
                 creeps[i].hp = max(0, creeps[i].hp - tower.type->damage);
 
@@ -1004,17 +1022,17 @@ public:
     {
         ++current_turn;
 
-        if (g_timer.get_elapsed() > G_TL * 0.93)
-        {
-            static bool f;
-            if (!f)
-            {
-                dump(current_turn);
-                dump(g_timer.get_elapsed());
-            }
-            f = true;
-            return {};
-        }
+//         if (g_timer.get_elapsed() > G_TL * 0.93)
+//         {
+// //             static bool f;
+// //             if (!f)
+// //             {
+// //                 dump(current_turn);
+// //                 dump(g_timer.get_elapsed());
+// //             }
+// //             f = true;
+//             return {};
+//         }
 
         vector<Pos> creep_prev_pos(creeps.size(), Pos(-1, -1));
         rep(i, creeps.size())
@@ -1311,6 +1329,18 @@ int main()
     vector<int> towerType(nt);
     input(towerType, nt);
 
+#ifdef GEN_INPUT
+    ofstream fs("input");
+    fs << n << endl;
+    fs << money << endl;
+    fs << board << endl;
+    fs << creepHealth << endl;
+    fs << creepMoney << endl;
+    fs << nt << endl;
+    fs << towerType << endl;
+    fs.flush();
+#endif
+
     PathDefense pd;
     pd.init(board, money, creepHealth, creepMoney, towerType);
 
@@ -1330,6 +1360,15 @@ int main()
         for (auto& r : ret)
             cout << r << endl;
         cout.flush();
+
+#ifdef GEN_INPUT
+        fs << money << endl;
+        fs << nc << endl;
+        fs << creep << endl;
+        fs << b << endl;
+        fs << baseHealth << endl;
+        fs.flush();
+#endif
     }
 }
 #endif
