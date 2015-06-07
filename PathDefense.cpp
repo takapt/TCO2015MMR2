@@ -1180,7 +1180,7 @@ public:
                         ++appear_creeps;
 
                 int bad = 0;
-                rep(_, 3)
+                rep(_, 2)
                 {
                     World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower, appear_creeps);
                     World next_world = ori_world;
@@ -1206,13 +1206,15 @@ public:
                             if (bad >= 2)
                                 break;
                         }
+                        else
+                            break;
                     }
                 }
                 if (bad >= 2)
                 {
                     sort(all(command_cands), [](const pair<double, Command>& a, const pair<double, Command>& b){return a.first > b.first;});
 
-                    int tries = 1;
+                    int tries = 3;
                     int com_i = 0;
                     bool ng = true;
                     while (tries-- >= 0)
