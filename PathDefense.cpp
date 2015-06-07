@@ -787,9 +787,6 @@ public:
 
     void update_attack()
     {
-//         vector<vector<int>> cand(towers.size());
-//         for (auto& v : cand)
-//             v.clear();
         static vector<int> cand[64 * 64];
         rep(i, towers.size())
             cand[i].clear();
@@ -806,18 +803,14 @@ public:
         {
             auto& tower = towers[tower_i];
 
-//             tuple<int, int> target(1919810, -1);
             int target = INT_MAX;
             for (int id : cand[tower_i])
             {
                 assert(tower.in_range(creep_paths[id].front()));
                 if (creep_hp[id] > 0)
-//                     upmin(target, make_tuple(tower.pos.sq_dist(creep_paths[id].front()), id));
                     upmin(target, (tower.pos.sq_dist(creep_paths[id].front()) << 16) | id);
             }
 
-//             int id = get<1>(target);
-//             if (id != -1)
             if (target != INT_MAX)
             {
                 int id = target & ((1 << 16) - 1);
@@ -919,7 +912,6 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
 {
     assert(creeps.size() == paths.size());
 
-//     vector<vector<int>> cand(towers.size());
     static vector<int> cand[64 * 64];
 
     int id_to_index[2048];
@@ -932,8 +924,6 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
         if (dead == creeps.size())
             break;
 
-//         for (auto& v : cand)
-//             v.clear();
         rep(i, towers.size())
             cand[i].clear();
 
@@ -961,18 +951,14 @@ pair<vector<Creep>, vector<int>> simulate(vector<Creep> creeps, const vector<vec
         {
             auto& tower = towers[tower_i];
 
-//             tuple<int, int, int> target(1919810, 1919810, -1);
             int target = INT_MAX;
             for (int i : cand[tower_i])
             {
                 assert(tower.in_range(paths[i][turn]));
                 if (creeps[i].hp > 0)
-//                     upmin(target, make_tuple(tower.pos.sq_dist(paths[i][turn]), creeps[i].id, i));
                     upmin(target, (tower.pos.sq_dist(paths[i][turn]) << 16) | creeps[i].id);
             }
 
-//             int i = get<2>(target);
-//             if (i != -1)
             if (target != INT_MAX)
             {
                 int i = id_to_index[target & ((1 << 16) - 1)];
@@ -1022,17 +1008,10 @@ public:
     {
         ++current_turn;
 
-//         if (g_timer.get_elapsed() > G_TL * 0.93)
-//         {
-// //             static bool f;
-// //             if (!f)
-// //             {
-// //                 dump(current_turn);
-// //                 dump(g_timer.get_elapsed());
-// //             }
-// //             f = true;
-//             return {};
-//         }
+#ifndef LOCAL
+        if (g_timer.get_elapsed() > G_TL * 0.93)
+            return {};
+#endif
 
         vector<Pos> creep_prev_pos(creeps.size(), Pos(-1, -1));
         rep(i, creeps.size())
@@ -1048,13 +1027,6 @@ public:
             path.push_back(c.pos);
         }
 
-
-        const int full_hp = base_hps.size() * 1000;
-        const int lost_hp = full_hp - accumulate(all(base_hps), 0);
-//         if ((double)lost_hp / full_hp > 0.2)
-//         {
-//             return {};
-//         }
 
         vector<vector<Pos>> paths(creeps.size());
         rep(i, creeps.size())
@@ -1194,8 +1166,6 @@ public:
 //             if (!in_range)
 //                 break;
 
-//             if (towers.empty() && current_turn < 100)
-//             if (best / 1e8 < tower.type->cost)
             {
                 int appear_creeps = 0;
                 rep(i, 2010)
