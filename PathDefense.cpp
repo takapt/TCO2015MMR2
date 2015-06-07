@@ -827,6 +827,7 @@ public:
     void add_tower(const Tower& t)
     {
         money -= t.type->cost;
+        assert(money >= 0);
         for (auto& p : board.path_in_range(t.pos.x, t.pos.y, t.type->range))
             attack_tower.at(p).push_back(towers.size());
         towers.push_back(t);
@@ -1146,6 +1147,7 @@ public:
                                 best = score;
                                 best_command.pos = Pos(x, y);
                                 best_command.type = tower_type;
+                                dump(best_command.pos);
                             }
                         }
                     }
@@ -1179,7 +1181,7 @@ public:
                         ++appear_creeps;
 
                 int bad = 0;
-                rep(_, 2)
+                rep(_, 5)
                 {
                     World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower, appear_creeps);
                     World next_world = ori_world;
@@ -1191,20 +1193,21 @@ public:
 
                         if (ori_world.score() >= next_world.score())
                         {
-                            //                         dump(current_turn);
-                            //                         dump(ori_world.money);
-                            //                         dump(ori_world.score());
-                            //                         dump(next_world.money);
-                            //                         dump(next_world.score());
-                            //                         dump(base_hps);
-                            //                         dump(ori_world.base_hps);
-                            //                         dump(next_world.base_hps);
-                            //                         cerr << endl;
+                            dump(tower.pos);
+                            dump(current_turn);
+                            dump(ori_world.money);
+                            dump(ori_world.score());
+                            dump(next_world.money);
+                            dump(next_world.score());
+                            dump(base_hps);
+                            dump(ori_world.base_hps);
+                            dump(next_world.base_hps);
+                            cerr << endl;
                             ++bad;
                         }
                     }
                 }
-                if (bad >= 2)
+                if (bad >= 3)
                 {
                     sort(all(command_cands), [](const pair<double, Command>& a, const pair<double, Command>& b){return a.first > b.first;});
 
@@ -1224,7 +1227,7 @@ public:
                         const Tower second_tower(com.pos, &tower_types[com.type.id]);
 
                         int bad = 0;
-                        rep(_, 2)
+                        rep(_, 3)
                         {
                             World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower, appear_creeps);
                             World next_world = ori_world;
@@ -1235,7 +1238,7 @@ public:
                                 next_world.add_tower(second_tower);
                                 next_world.go(2000);
 
-                                if (ori_world.score() >= next_world.score())
+                                if (ori_world.score() + 5 * creep_money >= next_world.score())
                                 {
                                     //                         dump(current_turn);
                                     //                         dump(ori_world.money);
@@ -1247,16 +1250,18 @@ public:
                                     //                         dump(next_world.base_hps);
                                     //                         cerr << endl;
                                     ++bad;
+                                    break;
                                 }
                             }
                         }
-                        if (bad < 2)
+                        if (bad == 0)
                         {
                             ng = false;
                             towers.push_back(second_tower);
                             board.build(com.pos.x, com.pos.y, com.type.id);
                             money -= tower_types[com.type.id].cost;
                             commands.push_back(com);
+                            break;
                         }
                     }
                     if (ng)
