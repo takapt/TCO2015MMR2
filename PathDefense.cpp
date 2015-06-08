@@ -1156,22 +1156,6 @@ public:
                 break;
 
             const Tower tower(best_command.pos, &tower_types[best_command.type.id]);
-//             bool in_range = false;
-//             rep(i, creeps.size())
-//             {
-//                 rep(j, min((int)paths.size() - 1, 20))
-//                 {
-//                     if (tower.in_range(paths[i][j]))
-//                     {
-//                         in_range = true;
-//                         break;
-//                     }
-//                 }
-//                 if (in_range)
-//                     break;
-//             }
-//             if (!in_range)
-//                 break;
 
             {
                 int appear_creeps = 0;
@@ -1185,30 +1169,18 @@ public:
                     World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower, appear_creeps);
                     World next_world = ori_world;
                     ori_world.go(2000);
-//                     if (accumulate(all(ori_world.base_hps), 0) == 0)
-                    {
+
                         next_world.add_tower(tower);
                         next_world.go(2000);
 
                         if (ori_world.score() > next_world.score())
                         {
-//                             dump(tower.pos);
-//                             dump(current_turn);
-//                             dump(ori_world.money);
-//                             dump(ori_world.score());
-//                             dump(next_world.money);
-//                             dump(next_world.score());
-//                             dump(base_hps);
-//                             dump(ori_world.base_hps);
-//                             dump(next_world.base_hps);
-//                             cerr << endl;
                             ++bad;
                             if (bad >= 2)
                                 break;
                         }
                         else
                             break;
-                    }
                 }
                 if (bad >= 2)
                 {
@@ -1235,26 +1207,15 @@ public:
                             World ori_world(board, max_creep_hp, creep_money, current_turn, money, creeps, creep_prev_pos, towers, base_hps, path_builder, attack_tower, appear_creeps);
                             World next_world = ori_world;
                             ori_world.go(2000);
-                            //                     if (accumulate(all(ori_world.base_hps), 0) == 0)
-                            {
-                                next_world.add_tower(tower);
-                                next_world.add_tower(second_tower);
-                                next_world.go(2000);
 
-                                if (ori_world.score() + 5 * creep_money >= next_world.score())
-                                {
-                                    //                         dump(current_turn);
-                                    //                         dump(ori_world.money);
-                                    //                         dump(ori_world.score());
-                                    //                         dump(next_world.money);
-                                    //                         dump(next_world.score());
-                                    //                         dump(base_hps);
-                                    //                         dump(ori_world.base_hps);
-                                    //                         dump(next_world.base_hps);
-                                    //                         cerr << endl;
-                                    ++bad;
-                                    break;
-                                }
+                            next_world.add_tower(tower);
+                            next_world.add_tower(second_tower);
+                            next_world.go(2000);
+
+                            if (ori_world.score() + 5 * creep_money >= next_world.score())
+                            {
+                                ++bad;
+                                break;
                             }
                         }
                         if (bad == 0)
