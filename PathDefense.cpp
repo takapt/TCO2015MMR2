@@ -1010,7 +1010,7 @@ public:
         ++current_turn;
 
 #ifndef LOCAL
-        if (g_timer.get_elapsed() > G_TL * 0.93)
+        if (g_timer.get_elapsed() > G_TL * 0.95)
             return {};
 #endif
 
@@ -1126,7 +1126,7 @@ public:
                                 if (c.hp == 0)
                                     npredict_score += creep_money * 5;
 
-                            double score = double(npredict_score - predict_score) - tower_type.cost / 3 * 3;
+                            double score = (npredict_score - predict_score) - tower_type.cost / 5 * 5;
 
                             score *= 10000;
                             score += tower_type.damage * board.path_in_range(x, y, tower_type.range).size() / (double)tower_type.cost;
